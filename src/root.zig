@@ -23,7 +23,7 @@ pub const FrameView = struct {
 
 /// Encode into caller-owned memory. No allocation is performed.
 pub fn encode(flags: u8, payload: []const u8, output: []u8, max_payload: usize) Error![]u8 {
-    if (payload.len > max_payload or payload.len > std.math.maxInt(u32)) return Error.PayloadTooLarge;
+    if (payload.len > max_payload or payload.len > @as(usize, std.math.maxInt(u32))) return Error.PayloadTooLarge;
     const total = HEADER_LEN + payload.len;
     if (output.len < total) return Error.OutputTooSmall;
     @memcpy(output[0..4], MAGIC);
@@ -42,9 +42,10 @@ pub fn decode(input: []const u8, max_payload: usize) Error!FrameView {
     if (!std.mem.eql(u8, input[0..4], MAGIC)) return Error.BadMagic;
     if (input[4] != VERSION) return Error.UnsupportedVersion;
     const length_bytes: *const [4]u8 = @ptrCast(input[6..10].ptr);
-    const len = std.mem.readInt(u32, length_bytes, .big);
-    if (len > max_payload) return Error.PayloadTooLarge;
-    if (input.len != HEADER_LEN + len) return Error.LengthMismatch;
+    const wire_len = std.mem.readInt(u32, length_bytes, .big);
+    const payload_len: usize = @intCast(wire_len);
+    if (payload_len > max_payload) return Error.PayloadTooLarge;
+    if (input.len != HEADER_LEN + payload_len) return Error.LengthMismatch;
     return .{ .version = input[4], .flags = input[5], .payload = input[HEADER_LEN..] };
 }
 
