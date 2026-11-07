@@ -10,7 +10,7 @@ pub fn putU64(o:[]u8,v:u64)Error![]u8{if(o.len<8)return Error.OutputTooSmall;std
 pub fn getU16(i:[]const u8)Error!u16{if(i.len<2)return Error.InputTooShort;return std.mem.readInt(u16,i[0..2],.big);}
 pub fn getU32(i:[]const u8)Error!u32{if(i.len<4)return Error.InputTooShort;return std.mem.readInt(u32,i[0..4],.big);}
 pub fn getU64(i:[]const u8)Error!u64{if(i.len<8)return Error.InputTooShort;return std.mem.readInt(u64,i[0..8],.big);}
-pub fn putBytes(a:std.mem.Allocator,v:[]const u8,max:usize)Error![]u8{if(v.len>max or v.len>0xffff_ffff)return Error.PayloadTooLarge;const o=a.alloc(u8,4+v.len)catch return Error.OutputTooSmall;std.mem.writeInt(u32,o[0..4],@intCast(v.len),.big);@memcpy(o[4..],v);return o;}
+pub fn putBytes(a:std.mem.Allocator,v:[]const u8,max:usize)Error![]u8{if(v.len>max or v.len>0xffff_ffff)return Error.PayloadTooLarge;const o=a.alloc(u8,4+v.len) catch return Error.OutputTooSmall;std.mem.writeInt(u32,o[0..4],@intCast(v.len),.big);@memcpy(o[4..],v);return o;}
 pub fn getBytes(i:[]const u8,max:usize)Error![]const u8{if(i.len<4)return Error.InputTooShort;const n:usize=@intCast(std.mem.readInt(u32,i[0..4],.big));if(n>max)return Error.PayloadTooLarge;if(i.len!=4+n)return Error.LengthMismatch;return i[4..];}
 pub fn putString(a:std.mem.Allocator,v:[]const u8,max:usize)Error![]u8{if(!std.unicode.utf8ValidateSlice(v))return Error.InvalidUtf8;return putBytes(a,v,max);}
 pub fn getString(i:[]const u8,max:usize)Error![]const u8{const v=try getBytes(i,max);if(!std.unicode.utf8ValidateSlice(v))return Error.InvalidUtf8;return v;}
