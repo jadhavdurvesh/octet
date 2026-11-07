@@ -29,7 +29,9 @@ pub fn encode(flags: u8, payload: []const u8, output: []u8, max_payload: usize) 
     @memcpy(output[0..4], MAGIC);
     output[4] = VERSION;
     output[5] = flags;
-    std.mem.writeInt(u32, output[6..10], @intCast(payload.len), .big);
+    var length_bytes: [4]u8 = undefined;
+    std.mem.writeInt(u32, &length_bytes, @intCast(payload.len), .big);
+    @memcpy(output[6..10], &length_bytes);
     @memcpy(output[HEADER_LEN..total], payload);
     return output[0..total];
 }
@@ -39,7 +41,8 @@ pub fn decode(input: []const u8, max_payload: usize) Error!FrameView {
     if (input.len < HEADER_LEN) return Error.InputTooShort;
     if (!std.mem.eql(u8, input[0..4], MAGIC)) return Error.BadMagic;
     if (input[4] != VERSION) return Error.UnsupportedVersion;
-    const len = std.mem.readInt(u32, input[6..10], .big);
+    const length_bytes: *const [4]u8 = @ptrCast(input[6..10].ptr);
+    const len = std.mem.readInt(u32, length_bytes, .big);
     if (len > max_payload) return Error.PayloadTooLarge;
     if (input.len != HEADER_LEN + len) return Error.LengthMismatch;
     return .{ .version = input[4], .flags = input[5], .payload = input[HEADER_LEN..] };
